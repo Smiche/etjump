@@ -1,0 +1,59 @@
+#!/bin/php
+<?php
+// Maps download/Config generation
+// Marcus Hughes <hello@msh100.uk>
+
+$maps = explode(':', getenv('MAPS'));
+
+if(null !== getenv('MAPS')) {
+    $maps = explode(':', 'NoDown:SnakeJumps:Skacharohuth_f:gamma_mill_b4:jhgamma_b1:just_jump_3_b2_2:lnarun_final:mrmen_gamma_final:snake4:handbreaker4_antefinal:handbreaker_b1_fixed:eatme:colordise:b12:Tranquil:Long');
+}
+
+if (!isset($_ENV['REDIRECTURL'])) {
+    $_ENV['REDIRECTURL'] = 'http://163.172.51.202/download/';
+}
+
+foreach ($maps as $map) {
+    if(!file_exists('etmain/' . $map . '.pk3')) {
+        shell_exec('wget -O etmain/' . $map . '.pk3 ' . $_ENV['REDIRECTURL'] . 'etmain/' . $map . '.pk3');
+    }
+}
+
+$configlocation = 'etjump/server.cfg';
+$config = file_get_contents($configlocation);
+
+if (!isset($_ENV['STARTMAP'])) {
+    $_ENV['STARTMAP'] = 'gamma_mill_b4';
+}
+
+if (!isset($_ENV['HOSTNAME'])) {
+    $_ENV['HOSTNAME'] = 'ETHost';
+}
+
+if (!isset($_ENV['MAP_PORT'])) {
+    $_ENV['MAP_PORT'] = 27960;
+}
+
+if ($_ENV['NOQUERY'] == 'true') {
+    $prepend = 'LD_PRELOAD="/home/game/libnoquery.so" ';
+} else {
+    $prepend = '';
+}
+
+if (!isset($_ENV['IP_MAX_CLIENTS'])) {
+    $_ENV['IP_MAX_CLIENTS'] = 3;
+}
+
+foreach ($_ENV as $key => $env) {
+    $config = str_replace('%' . $key . '%', $env, $config);
+}
+
+print_r($_ENV);
+
+$config = preg_replace('(%[A-Z]*?%)', '', $config);
+file_put_contents($configlocation, $config);
+
+exec ($prepend . './etded.x86 +set dedicated 2 +set vm_game 0 +set sv_autoUpdate 0' .
+      ' +set net_ip 0.0.0.0 +set net_port ' . $_ENV['MAP_PORT'] .
+      ' +set sv_maxclients 32 +set fs_game etjump +set sv_punkbuster 0' .
+      ' +exec server.cfg');
